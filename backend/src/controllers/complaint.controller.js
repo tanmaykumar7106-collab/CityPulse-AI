@@ -1,0 +1,112 @@
+import asyncHandler from "../utils/asyncHandler.js";
+import ApiError from "../utils/ApiError.js";
+import { sendResponse } from "../helpers/response.js";
+import getImageUrls from "../services/cloudinary.service.js";
+import { analyzeComplaint } from "../services/ai.service.js";
+import validateAI from "../helpers/aiValidator.js";
+
+import {
+    createComplaint,
+    getComplaintsByCitizen,
+    getComplaintById,
+    updateComplaint,
+    deleteComplaint,
+} from "../services/complaint.service.js";
+
+export const create = asyncHandler(async (req, res) => {
+    const uploadedImages = await getImageUrls(req.files);
+
+    const complaint = await createComplaint({
+        title: req.body.title,
+        description: req.body.description,
+        category: "",
+        priority: "Medium",
+        department: "",
+        referenceUrl: req.body.referenceUrl || "",
+        location: {
+            address: req.body.address || "",
+        },
+        images: uploadedImages,
+        citizen: req.user._id,
+    });
+
+    try {
+        let aiResult = await analyzeComplaint({
+            title: complaint.title,
+            description: complaint.description,
+            images: complaint.images,
+        });
+
+        aiResult = validateAI(aiResult);
+
+        complaint.category = aiResult.category;
+        complaint.priority = aiResult.priority;
+        complaint.department = aiResult.department;
+
+        complaint.aiAnalysis = {
+            category: aiResult.category,
+            priority: aiResult.priority,
+            confidence: aiResult.confidence,
+            explanation: aiResult.explanation,
+            processedAt: new Date(),
+        };
+
+        await complaint.save();
+    } catch (error) {
+        console.log("Gemini AI failed:", error.message);
+    }
+
+    return sendResponse(res, 201, "Complaint submitted successfully", complaint);
+});
+
+export const getMyComplaints = asyncHandler(async (req, res) => {
+    const complaints = await getComplaintsByCitizen(req.user._id);
+
+    return sendResponse(res, 200, "Complaints fetched successfully", complaints);
+});
+
+export const getOneComplaint = asyncHandler(async (req, res) => {
+    const complaint = await getComplaintById(req.params.id);
+
+    if (!complaint) {
+        throw new ApiError(404, "Complaint not found");
+    }
+
+    if (complaint.citizen._id.toString() !== req.user._id.toString()) {
+        throw new ApiError(403, "Access denied");
+    }
+
+    return sendResponse(res, 200, "Complaint fetched successfully", complaint);
+});
+
+export const update = asyncHandler(async (req, res) => {
+    const complaint = await getComplaintById(req.params.id);
+
+    if (!complaint) {
+        throw new ApiError(404, "Complaint not found");
+    }
+
+    if (complaint.citizen._id.toString() !== req.user._id.toString()) {
+        throw new ApiError(403, "Access denied");
+    }
+
+    const updatedComplaint = await updateComplaint(req.params.id, req.body);
+
+    return sendResponse(res, 200, "Complaint updated successfully", updatedComplaint);
+});
+
+export const remove = asyncHandler(async (req, res) => {
+    const complaint = await getComplaintById(req.params.id);
+
+    if (!complaint) {
+        throw new ApiError(404, "Complaint not found");
+    }
+
+    if (complaint.citizen._id.toString() !== req.user._id.toString()) {
+        throw new ApiError(403, "Access denied");
+    }
+
+    await deleteComplaint(req.params.id);
+
+    return sendResponse(res, 200, "Complaint deleted successfully");
+});

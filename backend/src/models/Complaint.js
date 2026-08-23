@@ -1,0 +1,97 @@
+import mongoose from "mongoose";
+
+const complaintSchema = new mongoose.Schema(
+    {
+        title: {
+            type: String,
+            required: true,
+            trim: true,
+        },
+
+        description: {
+            type: String,
+            required: true,
+            trim: true,
+        },
+
+        category: {
+            type: String,
+            default: "",
+        },
+
+        priority: {
+            type: String,
+            enum: ["Low", "Medium", "High", "Critical"],
+            default: "Low",
+        },
+
+        status: {
+            type: String,
+            enum: [
+                "Pending",
+                "Assigned",
+                "In Progress",
+                "Resolved",
+                "Rejected",
+            ],
+            default: "Pending",
+        },
+
+        department: {
+            type: String,
+            default: "",
+        },
+
+        location: {
+            address: {
+                type: String,
+                default: "",
+            },
+
+            latitude: Number,
+
+            longitude: Number,
+        },
+
+        images: [
+            {
+                url: String,
+                publicId: String,
+            },
+        ],
+
+        citizen: {
+            type: mongoose.Schema.Types.ObjectId,
+            ref: "User",
+            required: true,
+        },
+
+        assignedOfficer: {
+            type: mongoose.Schema.Types.ObjectId,
+            ref: "User",
+            default: null,
+        },
+
+        remarks: {
+            type: String,
+            default: "",
+        },
+
+        aiAnalysis: {
+            category: String,
+            priority: String,
+            confidence: Number,
+            explanation: String,
+            processedAt: Date,
+        },
+        referenceUrl: {
+            type: String,
+            default: "",
+        },
+    },
+    {
+        timestamps: true,
+    }
+);
+
+export default mongoose.model("Complaint", complaintSchema);
