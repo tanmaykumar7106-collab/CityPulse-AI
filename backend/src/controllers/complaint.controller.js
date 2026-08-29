@@ -16,12 +16,12 @@ import {
 } from "../services/complaint.service.js";
 
 export const create = asyncHandler(async (req, res) => {
-    const uploadedImages = await getImageUrls(req.files);
+    const uploadedImages = await getImageUrls(req.files || []);
 
     const complaint = await createComplaint({
         title: req.body.title,
         description: req.body.description,
-        category: "",
+        category: req.body.category || "",
         priority: "Medium",
         department: "",
         referenceUrl: req.body.referenceUrl || "",
@@ -96,7 +96,12 @@ export const update = asyncHandler(async (req, res) => {
 
     const updatedComplaint = await updateComplaint(req.params.id, req.body);
 
-    return sendResponse(res, 200, "Complaint updated successfully", updatedComplaint);
+    return sendResponse(
+        res,
+        200,
+        "Complaint updated successfully",
+        updatedComplaint
+    );
 });
 
 export const remove = asyncHandler(async (req, res) => {

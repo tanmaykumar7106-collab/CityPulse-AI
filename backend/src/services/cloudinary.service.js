@@ -8,11 +8,8 @@ const uploadBufferToCloudinary = (fileBuffer) => {
                 resource_type: "image",
             },
             (error, result) => {
-                if (error) {
-                    reject(error);
-                } else {
-                    resolve(result);
-                }
+                if (error) reject(error);
+                else resolve(result);
             }
         );
 

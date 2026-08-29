@@ -22,22 +22,21 @@ const complaintSchema = new mongoose.Schema(
         priority: {
             type: String,
             enum: ["Low", "Medium", "High", "Critical"],
-            default: "Low",
+            default: "Medium",
         },
 
         status: {
             type: String,
-            enum: [
-                "Pending",
-                "Assigned",
-                "In Progress",
-                "Resolved",
-                "Rejected",
-            ],
+            enum: ["Pending", "Assigned", "In Progress", "Resolved", "Rejected"],
             default: "Pending",
         },
 
         department: {
+            type: String,
+            default: "",
+        },
+
+        referenceUrl: {
             type: String,
             default: "",
         },
@@ -47,9 +46,7 @@ const complaintSchema = new mongoose.Schema(
                 type: String,
                 default: "",
             },
-
             latitude: Number,
-
             longitude: Number,
         },
 
@@ -85,10 +82,6 @@ const complaintSchema = new mongoose.Schema(
             explanation: String,
             imageObservation: String,
             processedAt: Date,
-        },
-        referenceUrl: {
-            type: String,
-            default: "",
         },
     },
     {

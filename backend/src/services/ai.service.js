@@ -37,17 +37,30 @@ Your job is to analyze a citizen complaint using:
 2. Complaint description
 3. Uploaded image evidence, if available
 
+The user may upload three civic issue images:
+1. Front View
+2. Side View
+3. Close View
+
+Analyze all uploaded images together.
+Use the front view for overall context.
+Use the side view to understand depth, size, and surroundings.
+Use the close view to identify actual damage or danger.
+
+Do not decide priority from only one image unless only one image is provided.
+
 IMPORTANT:
 Do not put everything in Medium.
 You must carefully estimate the actual public safety risk.
+Do not blindly trust the citizen's wording.
+If text says critical but image shows minor issue, reduce risk score.
+If image shows dangerous condition, increase risk score.
 
 Complaint Title:
 ${title}
 
 Complaint Description:
 ${description}
-
-Analyze the image evidence carefully if provided.
 
 You must return a riskScore between 0 and 100.
 
@@ -78,7 +91,7 @@ Risk score rules:
 - Overflowing drainage
 - Broken streetlight in dark public area
 - Exposed damaged road
-- Water leakage affecting road/pedestrians
+- Water leakage affecting road or pedestrians
 
 76 to 100 = Critical
 - Immediate danger to life or serious injury
@@ -127,12 +140,9 @@ Priority must match riskScore:
 26-50 Medium
 51-75 High
 76-100 Critical
-
-If text says critical but image shows minor issue, reduce riskScore.
-If image shows dangerous condition, increase riskScore.
 `;
 
-    const imageParts = files.slice(0, 2).map(imageFileToGeminiPart);
+    const imageParts = files.slice(0, 3).map(imageFileToGeminiPart);
 
     const response = await ai.models.generateContent({
         model: "gemini-2.5-flash",
