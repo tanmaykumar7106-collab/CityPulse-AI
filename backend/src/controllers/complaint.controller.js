@@ -16,6 +16,10 @@ import {
 } from "../services/complaint.service.js";
 
 export const create = asyncHandler(async (req, res) => {
+    if (!req.files || req.files.length === 0) {
+        throw new ApiError(400, "At least one issue image is required.");
+    }
+
     const uploadedImages = await getImageUrls(req.files || []);
 
     const complaint = await createComplaint({
@@ -32,33 +36,42 @@ export const create = asyncHandler(async (req, res) => {
         citizen: req.user._id,
     });
 
+    let aiResult = {};
+
     try {
-        let aiResult = await analyzeComplaint({
+        aiResult = await analyzeComplaint({
             title: complaint.title,
             description: complaint.description,
             files: req.files || [],
         });
 
-        aiResult = validateAI(aiResult);
-
-        complaint.category = aiResult.category;
-        complaint.priority = aiResult.priority;
-        complaint.department = aiResult.department;
-
-        complaint.aiAnalysis = {
-            category: aiResult.category,
-            priority: aiResult.priority,
-            riskScore: aiResult.riskScore,
-            confidence: aiResult.confidence,
-            explanation: aiResult.explanation,
-            imageObservation: aiResult.imageObservation,
-            processedAt: new Date(),
-        };
-
-        await complaint.save();
+        console.log("Raw Gemini Result:", aiResult);
     } catch (error) {
-        console.log("Gemini AI failed:", error.message);
+        console.log("Gemini AI failed, using rule-based fallback:", error.message);
     }
+
+    aiResult = validateAI(aiResult, {
+        title: complaint.title,
+        description: complaint.description,
+    });
+
+    console.log("Final AI Result:", aiResult);
+
+    complaint.category = aiResult.category;
+    complaint.priority = aiResult.priority;
+    complaint.department = aiResult.department;
+
+    complaint.aiAnalysis = {
+        category: aiResult.category,
+        priority: aiResult.priority,
+        riskScore: aiResult.riskScore,
+        confidence: aiResult.confidence,
+        explanation: aiResult.explanation,
+        imageObservation: aiResult.imageObservation,
+        processedAt: new Date(),
+    };
+
+    await complaint.save();
 
     return sendResponse(res, 201, "Complaint submitted successfully", complaint);
 });

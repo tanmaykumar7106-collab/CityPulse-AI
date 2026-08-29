@@ -24,14 +24,91 @@ const findMatchingValue = (value, allowedValues, fallback) => {
     return match || fallback;
 };
 
-const validateAI = (result = {}) => {
-    let riskScore = Number(result.riskScore);
+const getRiskScoreFromRules = (text = "") => {
+    const lowerText = text.toLowerCase();
 
-    if (Number.isNaN(riskScore)) {
-        riskScore = 50;
+    const criticalKeywords = [
+        "open manhole",
+        "manhole open",
+        "uncovered manhole",
+        "live wire",
+        "electric wire",
+        "current wire",
+        "road collapse",
+        "bridge collapse",
+        "severe flooding",
+        "heavy flooding",
+        "deep water",
+        "fire",
+        "accident happened",
+        "life danger",
+        "death risk",
+        "sewage overflow",
+        "deep pothole",
+        "hole in middle of road",
+    ];
+
+    const highKeywords = [
+        "large pothole",
+        "big pothole",
+        "busy road",
+        "main road",
+        "traffic jam",
+        "injury risk",
+        "can cause accident",
+        "dangerous",
+        "overflowing drain",
+        "broken streetlight",
+        "dark street",
+        "water leakage on road",
+        "road damaged",
+        "blocked drainage",
+    ];
+
+    const mediumKeywords = [
+        "garbage",
+        "small leakage",
+        "minor leakage",
+        "broken dustbin",
+        "dirty area",
+        "streetlight not working",
+        "drainage issue",
+    ];
+
+    if (criticalKeywords.some((keyword) => lowerText.includes(keyword))) {
+        return 88;
     }
 
-    riskScore = Math.max(0, Math.min(100, riskScore));
+    if (highKeywords.some((keyword) => lowerText.includes(keyword))) {
+        return 68;
+    }
+
+    if (mediumKeywords.some((keyword) => lowerText.includes(keyword))) {
+        return 42;
+    }
+
+    return null;
+};
+
+const validateAI = (result = {}, context = {}) => {
+    const complaintText = `${context.title || ""} ${context.description || ""} ${result.explanation || ""
+        } ${result.imageObservation || ""}`;
+
+    let aiRiskScore = Number(result.riskScore);
+
+    if (Number.isNaN(aiRiskScore)) {
+        aiRiskScore = 50;
+    }
+
+    aiRiskScore = Math.max(0, Math.min(100, aiRiskScore));
+
+    const ruleRiskScore = getRiskScoreFromRules(complaintText);
+
+    let finalRiskScore = aiRiskScore;
+
+    if (ruleRiskScore !== null) {
+        finalRiskScore = Math.max(aiRiskScore, ruleRiskScore);
+    }
 
     const category = findMatchingValue(
         result.category,
@@ -45,14 +122,14 @@ const validateAI = (result = {}) => {
         "Public Works"
     );
 
-    const priority = getPriorityFromRiskScore(riskScore);
+    const priority = getPriorityFromRiskScore(finalRiskScore);
 
     return {
         category,
         priority,
         department,
-        riskScore,
-        confidence: Number(result.confidence) || 70,
+        riskScore: finalRiskScore,
+        confidence: Number(result.confidence) || 75,
         explanation:
             result.explanation ||
             "AI analyzed the complaint and assigned priority based on risk level.",

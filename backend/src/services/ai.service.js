@@ -145,7 +145,7 @@ Priority must match riskScore:
     const imageParts = files.slice(0, 3).map(imageFileToGeminiPart);
 
     const response = await ai.models.generateContent({
-        model: "gemini-2.5-flash",
+        model: "gemini-3.6-flash",
         contents: [
             {
                 role: "user",
