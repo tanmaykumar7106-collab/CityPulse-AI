@@ -80,8 +80,10 @@ const complaintSchema = new mongoose.Schema(
         aiAnalysis: {
             category: String,
             priority: String,
+            riskScore: Number,
             confidence: Number,
             explanation: String,
+            imageObservation: String,
             processedAt: Date,
         },
         referenceUrl: {

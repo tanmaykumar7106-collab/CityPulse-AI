@@ -29,3 +29,27 @@ export const updateComplaint = async (id, data) => {
 export const deleteComplaint = async (id) => {
     return await Complaint.findByIdAndDelete(id);
 };
+export const getAllComplaints = async () => {
+    return await Complaint.find()
+        .sort({ createdAt: -1 })
+        .populate("citizen", "fullName email role")
+        .populate("assignedOfficer", "fullName email role");
+};
+
+export const updateComplaintStatus = async (id, status, remarks, officerId) => {
+    const complaint = await Complaint.findById(id);
+
+    if (!complaint) {
+        return null;
+    }
+
+    complaint.status = status;
+
+    if (remarks !== undefined) {
+        complaint.remarks = remarks;
+    }
+
+    complaint.assignedOfficer = officerId;
+
+    return await complaint.save();
+};

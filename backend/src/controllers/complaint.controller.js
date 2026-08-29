@@ -11,6 +11,8 @@ import {
     getComplaintById,
     updateComplaint,
     deleteComplaint,
+    getAllComplaints,
+    updateComplaintStatus,
 } from "../services/complaint.service.js";
 
 export const create = asyncHandler(async (req, res) => {
@@ -34,7 +36,7 @@ export const create = asyncHandler(async (req, res) => {
         let aiResult = await analyzeComplaint({
             title: complaint.title,
             description: complaint.description,
-            images: complaint.images,
+            files: req.files || [],
         });
 
         aiResult = validateAI(aiResult);
@@ -46,8 +48,10 @@ export const create = asyncHandler(async (req, res) => {
         complaint.aiAnalysis = {
             category: aiResult.category,
             priority: aiResult.priority,
+            riskScore: aiResult.riskScore,
             confidence: aiResult.confidence,
             explanation: aiResult.explanation,
+            imageObservation: aiResult.imageObservation,
             processedAt: new Date(),
         };
 
@@ -109,4 +113,37 @@ export const remove = asyncHandler(async (req, res) => {
     await deleteComplaint(req.params.id);
 
     return sendResponse(res, 200, "Complaint deleted successfully");
+});
+
+export const getAll = asyncHandler(async (req, res) => {
+    const complaints = await getAllComplaints();
+
+    return sendResponse(
+        res,
+        200,
+        "All complaints fetched successfully",
+        complaints
+    );
+});
+
+export const changeStatus = asyncHandler(async (req, res) => {
+    const { status, remarks } = req.body;
+
+    const complaint = await updateComplaintStatus(
+        req.params.id,
+        status,
+        remarks,
+        req.user._id
+    );
+
+    if (!complaint) {
+        throw new ApiError(404, "Complaint not found");
+    }
+
+    return sendResponse(
+        res,
+        200,
+        "Complaint status updated successfully",
+        complaint
+    );
 });
