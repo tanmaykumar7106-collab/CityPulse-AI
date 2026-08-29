@@ -29,11 +29,12 @@ export const updateComplaint = async (id, data) => {
 export const deleteComplaint = async (id) => {
     return await Complaint.findByIdAndDelete(id);
 };
+
 export const getAllComplaints = async () => {
     return await Complaint.find()
         .sort({ createdAt: -1 })
-        .populate("citizen", "fullName email role")
-        .populate("assignedOfficer", "fullName email role");
+        .populate("citizen", "fullName email phone role")
+        .populate("assignedOfficer", "fullName email phone role");
 };
 
 export const updateComplaintStatus = async (id, status, remarks, officerId) => {

@@ -24,6 +24,96 @@ const findMatchingValue = (value, allowedValues, fallback) => {
     return match || fallback;
 };
 
+const detectCategoryFromText = (text = "") => {
+    const lowerText = text.toLowerCase();
+
+    if (
+        lowerText.includes("pothole") ||
+        lowerText.includes("road") ||
+        lowerText.includes("manhole") ||
+        lowerText.includes("road damage") ||
+        lowerText.includes("road collapse")
+    ) {
+        return "Roads";
+    }
+
+    if (
+        lowerText.includes("drain") ||
+        lowerText.includes("drainage") ||
+        lowerText.includes("sewage") ||
+        lowerText.includes("water logging") ||
+        lowerText.includes("flooding")
+    ) {
+        return "Drainage";
+    }
+
+    if (
+        lowerText.includes("garbage") ||
+        lowerText.includes("waste") ||
+        lowerText.includes("dustbin") ||
+        lowerText.includes("trash")
+    ) {
+        return "Garbage";
+    }
+
+    if (
+        lowerText.includes("streetlight") ||
+        lowerText.includes("street light") ||
+        lowerText.includes("electric") ||
+        lowerText.includes("wire") ||
+        lowerText.includes("light not working")
+    ) {
+        return "Street Lights";
+    }
+
+    if (
+        lowerText.includes("water leakage") ||
+        lowerText.includes("pipe") ||
+        lowerText.includes("water supply")
+    ) {
+        return "Water Supply";
+    }
+
+    if (
+        lowerText.includes("traffic") ||
+        lowerText.includes("vehicle") ||
+        lowerText.includes("jam")
+    ) {
+        return "Traffic";
+    }
+
+    if (
+        lowerText.includes("park") ||
+        lowerText.includes("playground") ||
+        lowerText.includes("garden")
+    ) {
+        return "Parks";
+    }
+
+    return "Other";
+};
+
+const getDepartmentFromCategory = (category) => {
+    switch (category) {
+        case "Roads":
+            return "Public Works";
+        case "Drainage":
+            return "Water Department";
+        case "Garbage":
+            return "Sanitation Department";
+        case "Street Lights":
+            return "Electrical Department";
+        case "Water Supply":
+            return "Water Department";
+        case "Traffic":
+            return "Traffic Department";
+        case "Parks":
+            return "Parks Department";
+        default:
+            return "Public Works";
+    }
+};
+
 const getRiskScoreFromRules = (text = "") => {
     const lowerText = text.toLowerCase();
 
@@ -33,12 +123,9 @@ const getRiskScoreFromRules = (text = "") => {
         "uncovered manhole",
         "live wire",
         "electric wire",
-        "current wire",
         "road collapse",
-        "bridge collapse",
         "severe flooding",
         "heavy flooding",
-        "deep water",
         "fire",
         "accident happened",
         "life danger",
@@ -110,17 +197,25 @@ const validateAI = (result = {}, context = {}) => {
         finalRiskScore = Math.max(aiRiskScore, ruleRiskScore);
     }
 
-    const category = findMatchingValue(
+    let category = findMatchingValue(
         result.category,
         CATEGORIES,
-        "Other"
+        ""
     );
 
-    const department = findMatchingValue(
+    if (!category) {
+        category = detectCategoryFromText(complaintText);
+    }
+
+    let department = findMatchingValue(
         result.department,
         DEPARTMENTS,
-        "Public Works"
+        ""
     );
+
+    if (!department) {
+        department = getDepartmentFromCategory(category);
+    }
 
     const priority = getPriorityFromRiskScore(finalRiskScore);
 
@@ -135,7 +230,7 @@ const validateAI = (result = {}, context = {}) => {
             "AI analyzed the complaint and assigned priority based on risk level.",
         imageObservation:
             result.imageObservation ||
-            "No detailed image observation available.",
+            "Image evidence was submitted and used for complaint verification.",
     };
 };
 

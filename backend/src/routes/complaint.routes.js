@@ -37,17 +37,26 @@ const validate = (req, res, next) => {
     next();
 };
 
+// Citizen only: create complaint
 router.post(
     "/",
     auth,
+    authorize(USER_ROLES.CITIZEN),
     upload.array("images", 5),
     createComplaintValidation,
     validate,
     create
 );
 
-router.get("/", auth, getMyComplaints);
+// Citizen only: own complaints
+router.get(
+    "/",
+    auth,
+    authorize(USER_ROLES.CITIZEN),
+    getMyComplaints
+);
 
+// Admin/Officer only: view all complaints
 router.get(
     "/admin/all",
     auth,
@@ -55,6 +64,7 @@ router.get(
     getAll
 );
 
+// Admin/Officer only: update status
 router.patch(
     "/:id/status",
     auth,
@@ -64,10 +74,23 @@ router.patch(
     changeStatus
 );
 
+// Citizen can view own complaint, admin/officer can view any complaint
 router.get("/:id", auth, getOneComplaint);
 
-router.put("/:id", auth, update);
+// Citizen only: update own complaint
+router.put(
+    "/:id",
+    auth,
+    authorize(USER_ROLES.CITIZEN),
+    update
+);
 
-router.delete("/:id", auth, remove);
+// Citizen only: delete own complaint
+router.delete(
+    "/:id",
+    auth,
+    authorize(USER_ROLES.CITIZEN),
+    remove
+);
 
 export default router;

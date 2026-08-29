@@ -1,10 +1,6 @@
 import express from "express";
 
-import {
-    register,
-    login,
-    profile,
-} from "../controllers/auth.controller.js";
+import { register, login, profile, createDemoAdmin } from "../controllers/auth.controller.js";
 
 import auth from "../middleware/auth.middleware.js";
 
@@ -33,24 +29,12 @@ const validate = (req, res, next) => {
     next();
 };
 
-router.post(
-    "/register",
-    registerValidation,
-    validate,
-    register
-);
+router.post("/register", registerValidation, validate, register);
 
-router.post(
-    "/login",
-    loginValidation,
-    validate,
-    login
-);
+router.post("/login", loginValidation, validate, login);
 
-router.get(
-    "/profile",
-    auth,
-    profile
-);
+router.post("/create-demo-admin", createDemoAdmin);
+
+router.get("/profile", auth, profile);
 
 export default router;

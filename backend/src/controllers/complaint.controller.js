@@ -89,7 +89,13 @@ export const getOneComplaint = asyncHandler(async (req, res) => {
         throw new ApiError(404, "Complaint not found");
     }
 
-    if (complaint.citizen._id.toString() !== req.user._id.toString()) {
+    const isCitizen = req.user.role === "citizen";
+
+    const complaintOwnerId = complaint.citizen?._id
+        ? complaint.citizen._id.toString()
+        : complaint.citizen?.toString();
+
+    if (isCitizen && complaintOwnerId !== req.user._id.toString()) {
         throw new ApiError(403, "Access denied");
     }
 
@@ -124,8 +130,21 @@ export const remove = asyncHandler(async (req, res) => {
         throw new ApiError(404, "Complaint not found");
     }
 
-    if (complaint.citizen._id.toString() !== req.user._id.toString()) {
-        throw new ApiError(403, "Access denied");
+    const complaintOwnerId = complaint.citizen?._id
+        ? complaint.citizen._id.toString()
+        : complaint.citizen?.toString();
+
+    const loggedInUserId = req.user._id.toString();
+
+    if (!complaintOwnerId) {
+        throw new ApiError(400, "Complaint owner not found.");
+    }
+
+    if (complaintOwnerId !== loggedInUserId) {
+        throw new ApiError(
+            403,
+            "Access denied. You can delete only your own complaint."
+        );
     }
 
     await deleteComplaint(req.params.id);

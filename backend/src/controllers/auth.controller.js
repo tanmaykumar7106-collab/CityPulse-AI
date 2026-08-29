@@ -68,3 +68,39 @@ export const profile = asyncHandler(async (req, res) => {
         req.user
     );
 });
+export const createDemoAdmin = asyncHandler(async (req, res) => {
+    if (process.env.ALLOW_ADMIN_CREATION !== "true") {
+        throw new ApiError(403, "Admin creation is disabled.");
+    }
+
+    const adminEmail = "admin@citypulseai.com";
+    const adminPassword = "Admin@123456";
+
+    let user = await User.findOne({ email: adminEmail });
+
+    if (!user) {
+        user = await User.create({
+            fullName: "CityPulse Admin",
+            email: adminEmail,
+            password: adminPassword,
+            role: "admin",
+        });
+    } else {
+        user.fullName = "CityPulse Admin";
+        user.password = adminPassword;
+        user.role = "admin";
+        await user.save();
+    }
+
+    const token = generateToken(user._id, user.role);
+    const userResponse = await User.findById(user._id).select("-password");
+
+    return sendResponse(res, 201, "Admin account ready successfully", {
+        token,
+        user: userResponse,
+        credentials: {
+            email: adminEmail,
+            password: adminPassword,
+        },
+    });
+});
