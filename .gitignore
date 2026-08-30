@@ -1,37 +1,15 @@
-# Node
 node_modules/
 dist/
-
-# Python
-venv/
-__pycache__/
-*.pyc
-
-# Environment
 .env
 
-# VS Code
-.vscode/
+backend/.env
+backend/node_modules/
 
-# Logs
-*.log
+frontend-1/.env
+frontend-1/node_modules/
+frontend-1/dist/
 
-# OS
-.DS_Store
-Thumbs.db
-
-# Build
-build/
-
-# Python cache
-.pytest_cache/
-
-# Database
-*.db
-
-frontend-1/
 yolo-service/venv/
 yolo-service/__pycache__/
 yolo-service/runs/
 yolo-service/*.pyc
-backend/.env

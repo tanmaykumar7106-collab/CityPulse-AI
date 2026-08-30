@@ -5,3 +5,6 @@ frontend-1/
 .env.example
 yolo-service/venv/
 yolo-service/__pycache__/
+frontend-1/
+yolo-service/runs/
+yolo-service/*.pyc
