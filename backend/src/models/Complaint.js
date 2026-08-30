@@ -81,6 +81,21 @@ const complaintSchema = new mongoose.Schema(
             confidence: Number,
             explanation: String,
             imageObservation: String,
+            yoloSummary: String,
+            yoloDetections: [
+                {
+                    fileName: String,
+                    classId: Number,
+                    className: String,
+                    confidence: Number,
+                    box: {
+                        x1: Number,
+                        y1: Number,
+                        x2: Number,
+                        y2: Number,
+                    },
+                },
+            ],
             processedAt: Date,
         },
     },

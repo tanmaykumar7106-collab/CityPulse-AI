@@ -3,3 +3,5 @@ node_modules/
 backend/.env
 frontend-1/
 .env.example
+yolo-service/venv/
+yolo-service/__pycache__/

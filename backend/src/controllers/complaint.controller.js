@@ -4,6 +4,7 @@ import { sendResponse } from "../helpers/response.js";
 import getImageUrls from "../services/cloudinary.service.js";
 import { analyzeComplaint } from "../services/ai.service.js";
 import validateAI from "../helpers/aiValidator.js";
+import { analyzeImagesWithYOLO } from "../services/yolo.service.js";
 
 import {
     createComplaint,
@@ -21,6 +22,8 @@ export const create = asyncHandler(async (req, res) => {
     }
 
     const uploadedImages = await getImageUrls(req.files || []);
+    const yoloResult = await analyzeImagesWithYOLO(req.files || []);
+    console.log("YOLO Result:", yoloResult);
 
     const complaint = await createComplaint({
         title: req.body.title,
@@ -43,6 +46,7 @@ export const create = asyncHandler(async (req, res) => {
             title: complaint.title,
             description: complaint.description,
             files: req.files || [],
+            yoloResult,
         });
 
         console.log("Raw Gemini Result:", aiResult);
@@ -68,9 +72,10 @@ export const create = asyncHandler(async (req, res) => {
         confidence: aiResult.confidence,
         explanation: aiResult.explanation,
         imageObservation: aiResult.imageObservation,
+        yoloSummary: yoloResult.summary,
+        yoloDetections: yoloResult.detections,
         processedAt: new Date(),
     };
-
     await complaint.save();
 
     return sendResponse(res, 201, "Complaint submitted successfully", complaint);

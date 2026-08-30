@@ -28,7 +28,12 @@ const imageFileToGeminiPart = (file) => {
     };
 };
 
-export const analyzeComplaint = async ({ title, description, files = [] }) => {
+export const analyzeComplaint = async ({
+    title,
+    description,
+    files = [],
+    yoloResult = null,
+}) => {
     const prompt = `
 You are an AI civic infrastructure risk analyst for CityPulse AI.
 
@@ -59,8 +64,18 @@ If image shows dangerous condition, increase risk score.
 Complaint Title:
 ${title}
 
+Complaint Title:
+${title}
+
 Complaint Description:
 ${description}
+
+YOLO Image Detection Result:
+${JSON.stringify(yoloResult, null, 2)}
+
+Use YOLO result as visual evidence, but do not blindly trust it.
+If YOLO detects open_manhole, pothole, road_damage, or garbage with high confidence, consider it while deciding category and risk score.
+If YOLO result conflicts with complaint text, explain the safer decision.
 
 You must return a riskScore between 0 and 100.
 
