@@ -57,6 +57,7 @@ export const create = asyncHandler(async (req, res) => {
     aiResult = validateAI(aiResult, {
         title: complaint.title,
         description: complaint.description,
+        yoloResult,
     });
 
     console.log("Final AI Result:", aiResult);

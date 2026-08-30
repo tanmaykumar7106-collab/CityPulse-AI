@@ -35,34 +35,22 @@ export const analyzeComplaint = async ({
     yoloResult = null,
 }) => {
     const prompt = `
-You are an AI civic infrastructure risk analyst for CityPulse AI.
+You are CityPulse AI, a civic infrastructure risk analysis system.
 
 Your job is to analyze a citizen complaint using:
 1. Complaint title
 2. Complaint description
-3. Uploaded image evidence, if available
+3. Uploaded image evidence
+4. YOLO object detection result
 
-The user may upload three civic issue images:
-1. Front View
-2. Side View
-3. Close View
-
-Analyze all uploaded images together.
-Use the front view for overall context.
-Use the side view to understand depth, size, and surroundings.
-Use the close view to identify actual damage or danger.
-
-Do not decide priority from only one image unless only one image is provided.
-
-IMPORTANT:
-Do not put everything in Medium.
-You must carefully estimate the actual public safety risk.
-Do not blindly trust the citizen's wording.
-If text says critical but image shows minor issue, reduce risk score.
-If image shows dangerous condition, increase risk score.
-
-Complaint Title:
-${title}
+You must decide:
+- civic issue category
+- public risk score
+- priority
+- responsible department
+- confidence
+- explanation
+- image observation
 
 Complaint Title:
 ${title}
@@ -73,11 +61,32 @@ ${description}
 YOLO Image Detection Result:
 ${JSON.stringify(yoloResult, null, 2)}
 
-Use YOLO result as visual evidence, but do not blindly trust it.
-If YOLO detects open_manhole, pothole, road_damage, or garbage with high confidence, consider it while deciding category and risk score.
-If YOLO result conflicts with complaint text, explain the safer decision.
+Important rules:
 
-You must return a riskScore between 0 and 100.
+1. Do not blindly trust the citizen's text.
+If the citizen writes "critical" but the image/YOLO result shows a minor issue, reduce the risk.
+
+2. Do not blindly trust YOLO either.
+YOLO is visual evidence only. Use it with complaint text and image understanding.
+
+3. If YOLO detects open_manhole with confidence >= 0.50:
+Treat it as a serious safety issue.
+Usually priority should be Critical unless the image/text clearly shows it is not dangerous.
+
+4. If YOLO detects pothole with confidence >= 0.50:
+Usually priority should be High.
+Make it Critical only if text/image suggests busy road, night danger, deep pothole, accident risk, school zone, market area, rain, or two-wheeler risk.
+
+5. If YOLO detects road_damage with confidence >= 0.50:
+Usually priority should be Medium or High depending on traffic danger.
+Do not make it Critical unless severe collapse or immediate accident risk is present.
+
+6. If YOLO detects garbage with confidence >= 0.50:
+Usually priority should be Medium.
+Make it High if it is near school, hospital, residential area, public market, drainage, or creates health risk.
+
+7. If complaint text and YOLO result conflict:
+Mention the conflict in explanation and choose the safer realistic category.
 
 Risk score rules:
 
@@ -86,39 +95,36 @@ Risk score rules:
 - No public safety risk
 - Cosmetic damage
 - Small garbage pile
-- Minor park maintenance
-- Small road crack not affecting movement
+- Small crack or minor road surface issue
 
 26 to 50 = Medium
 - Visible civic issue
 - Needs attention
 - Low immediate danger
-- Small water leakage
-- Broken but non-dangerous public asset
+- Small pothole
 - Moderate garbage accumulation
-- Minor drainage blockage
+- Minor road damage
+- Small drainage or hygiene issue
 
 51 to 75 = High
 - Unsafe public condition
 - Can cause injury
 - Traffic disruption
 - Large pothole
-- Overflowing drainage
-- Broken streetlight in dark public area
-- Exposed damaged road
-- Water leakage affecting road or pedestrians
+- Damaged road affecting movement
+- Garbage near school/residential/market area
+- Broken or hazardous infrastructure
+- Water or drainage issue affecting road users
 
 76 to 100 = Critical
 - Immediate danger to life or serious injury
 - Open manhole
+- Deep pothole on busy road
+- Road collapse
 - Live electric wire
 - Severe flooding
-- Road collapse
-- Fire hazard
-- Accident already happening or very likely
-- Large obstruction on busy road
-- Deep pothole in high traffic area
-- Sewage overflow creating serious health hazard
+- Serious sewage overflow
+- Accident already likely or reported
 
 Category options:
 Roads
@@ -138,7 +144,13 @@ Sanitation Department
 Traffic Department
 Parks Department
 
-Return ONLY valid JSON.
+Priority must strictly match riskScore:
+0-25 = Low
+26-50 = Medium
+51-75 = High
+76-100 = Critical
+
+Return ONLY valid JSON in this exact format:
 
 {
   "category": "",
@@ -149,12 +161,6 @@ Return ONLY valid JSON.
   "explanation": "",
   "imageObservation": ""
 }
-
-Priority must match riskScore:
-0-25 Low
-26-50 Medium
-51-75 High
-76-100 Critical
 `;
 
     const imageParts = files.slice(0, 3).map(imageFileToGeminiPart);

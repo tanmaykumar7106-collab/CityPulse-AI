@@ -28,23 +28,26 @@ const detectCategoryFromText = (text = "") => {
     const lowerText = text.toLowerCase();
 
     if (
+        lowerText.includes("open manhole") ||
+        lowerText.includes("manhole") ||
+        lowerText.includes("sewage") ||
+        lowerText.includes("drain") ||
+        lowerText.includes("drainage") ||
+        lowerText.includes("water logging") ||
+        lowerText.includes("waterlogging") ||
+        lowerText.includes("flooding")
+    ) {
+        return "Drainage";
+    }
+
+    if (
         lowerText.includes("pothole") ||
         lowerText.includes("road") ||
-        lowerText.includes("manhole") ||
+        lowerText.includes("crack") ||
         lowerText.includes("road damage") ||
         lowerText.includes("road collapse")
     ) {
         return "Roads";
-    }
-
-    if (
-        lowerText.includes("drain") ||
-        lowerText.includes("drainage") ||
-        lowerText.includes("sewage") ||
-        lowerText.includes("water logging") ||
-        lowerText.includes("flooding")
-    ) {
-        return "Drainage";
     }
 
     if (
@@ -114,9 +117,12 @@ const getDepartmentFromCategory = (category) => {
     }
 };
 
-const getRiskScoreFromRules = (text = "") => {
+const hasAnyKeyword = (text = "", keywords = []) => {
     const lowerText = text.toLowerCase();
+    return keywords.some((keyword) => lowerText.includes(keyword));
+};
 
+const getRiskScoreFromTextRules = (text = "") => {
     const criticalKeywords = [
         "open manhole",
         "manhole open",
@@ -144,6 +150,13 @@ const getRiskScoreFromRules = (text = "") => {
         "injury risk",
         "can cause accident",
         "dangerous",
+        "market area",
+        "school",
+        "hospital",
+        "two-wheeler",
+        "two wheeler",
+        "night",
+        "rain",
         "overflowing drain",
         "broken streetlight",
         "dark street",
@@ -160,26 +173,141 @@ const getRiskScoreFromRules = (text = "") => {
         "dirty area",
         "streetlight not working",
         "drainage issue",
+        "small pothole",
+        "minor road damage",
     ];
 
-    if (criticalKeywords.some((keyword) => lowerText.includes(keyword))) {
+    if (hasAnyKeyword(text, criticalKeywords)) {
         return 88;
     }
 
-    if (highKeywords.some((keyword) => lowerText.includes(keyword))) {
+    if (hasAnyKeyword(text, highKeywords)) {
         return 68;
     }
 
-    if (mediumKeywords.some((keyword) => lowerText.includes(keyword))) {
+    if (hasAnyKeyword(text, mediumKeywords)) {
         return 42;
     }
 
     return null;
 };
 
+const getTopYoloDetection = (yoloResult = {}) => {
+    if (yoloResult?.topDetection) {
+        return yoloResult.topDetection;
+    }
+
+    if (Array.isArray(yoloResult?.detections) && yoloResult.detections.length > 0) {
+        return yoloResult.detections[0];
+    }
+
+    return null;
+};
+
+const getYoloSuggestion = (yoloResult = {}, text = "") => {
+    const topDetection = getTopYoloDetection(yoloResult);
+
+    if (!topDetection) {
+        return {
+            category: "",
+            department: "",
+            minRiskScore: null,
+            reason: "No confident YOLO civic issue detection found.",
+        };
+    }
+
+    const className = normalizeValue(topDetection.className);
+    const confidence = Number(topDetection.confidence) || 0;
+
+    if (confidence < 0.35) {
+        return {
+            category: "",
+            department: "",
+            minRiskScore: null,
+            reason: "YOLO confidence is too low to influence final priority.",
+        };
+    }
+
+    const dangerContext = hasAnyKeyword(text, [
+        "busy road",
+        "main road",
+        "market",
+        "school",
+        "hospital",
+        "night",
+        "rain",
+        "accident",
+        "two-wheeler",
+        "two wheeler",
+        "deep",
+        "large",
+        "big",
+        "middle of road",
+        "traffic",
+    ]);
+
+    if (className === "open_manhole") {
+        return {
+            category: "Drainage",
+            department: "Water Department",
+            minRiskScore: confidence >= 0.5 ? 86 : 76,
+            reason: "YOLO detected open manhole, which is a serious public safety risk.",
+        };
+    }
+
+    if (className === "pothole") {
+        return {
+            category: "Roads",
+            department: "Public Works",
+            minRiskScore: dangerContext ? 78 : 62,
+            reason: "YOLO detected pothole and risk was adjusted based on road safety context.",
+        };
+    }
+
+    if (className === "road_damage") {
+        return {
+            category: "Roads",
+            department: "Public Works",
+            minRiskScore: dangerContext ? 64 : 46,
+            reason: "YOLO detected road damage and priority was adjusted based on severity context.",
+        };
+    }
+
+    if (className === "garbage") {
+        const healthContext = hasAnyKeyword(text, [
+            "school",
+            "hospital",
+            "residential",
+            "market",
+            "bad smell",
+            "health",
+            "hygiene",
+            "children",
+            "drain",
+            "many days",
+        ]);
+
+        return {
+            category: "Garbage",
+            department: "Sanitation Department",
+            minRiskScore: healthContext ? 58 : 38,
+            reason: "YOLO detected garbage and risk was adjusted based on hygiene context.",
+        };
+    }
+
+    return {
+        category: "",
+        department: "",
+        minRiskScore: null,
+        reason: "YOLO detected an unknown class.",
+    };
+};
+
 const validateAI = (result = {}, context = {}) => {
+    const yoloResult = context.yoloResult || {};
+
     const complaintText = `${context.title || ""} ${context.description || ""} ${result.explanation || ""
-        } ${result.imageObservation || ""}`;
+        } ${result.imageObservation || ""} ${yoloResult.summary || ""}`;
 
     let aiRiskScore = Number(result.riskScore);
 
@@ -189,29 +317,36 @@ const validateAI = (result = {}, context = {}) => {
 
     aiRiskScore = Math.max(0, Math.min(100, aiRiskScore));
 
-    const ruleRiskScore = getRiskScoreFromRules(complaintText);
+    const textRuleRiskScore = getRiskScoreFromTextRules(complaintText);
+    const yoloSuggestion = getYoloSuggestion(yoloResult, complaintText);
 
     let finalRiskScore = aiRiskScore;
 
-    if (ruleRiskScore !== null) {
-        finalRiskScore = Math.max(aiRiskScore, ruleRiskScore);
+    if (textRuleRiskScore !== null) {
+        finalRiskScore = Math.max(finalRiskScore, textRuleRiskScore);
     }
 
-    let category = findMatchingValue(
-        result.category,
-        CATEGORIES,
-        ""
-    );
+    if (yoloSuggestion.minRiskScore !== null) {
+        finalRiskScore = Math.max(finalRiskScore, yoloSuggestion.minRiskScore);
+    }
+
+    finalRiskScore = Math.max(0, Math.min(100, finalRiskScore));
+
+    let category = findMatchingValue(result.category, CATEGORIES, "");
+
+    if (yoloSuggestion.category) {
+        category = yoloSuggestion.category;
+    }
 
     if (!category) {
         category = detectCategoryFromText(complaintText);
     }
 
-    let department = findMatchingValue(
-        result.department,
-        DEPARTMENTS,
-        ""
-    );
+    let department = findMatchingValue(result.department, DEPARTMENTS, "");
+
+    if (yoloSuggestion.department) {
+        department = yoloSuggestion.department;
+    }
 
     if (!department) {
         department = getDepartmentFromCategory(category);
@@ -227,9 +362,10 @@ const validateAI = (result = {}, context = {}) => {
         confidence: Number(result.confidence) || 75,
         explanation:
             result.explanation ||
-            "AI analyzed the complaint and assigned priority based on risk level.",
+            `AI analyzed the complaint using text, image evidence, and YOLO detection. ${yoloSuggestion.reason}`,
         imageObservation:
             result.imageObservation ||
+            yoloResult.summary ||
             "Image evidence was submitted and used for complaint verification.",
     };
 };
