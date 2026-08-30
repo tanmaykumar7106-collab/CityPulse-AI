@@ -28,3 +28,10 @@ build/
 
 # Database
 *.db
+
+frontend-1/
+yolo-service/venv/
+yolo-service/__pycache__/
+yolo-service/runs/
+yolo-service/*.pyc
+backend/.env
